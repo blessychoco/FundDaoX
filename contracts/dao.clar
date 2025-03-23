@@ -157,3 +157,63 @@
   )
 )
 
+;; Back a venture
+(define-public (back-venture (venture-id uint) (stx-transferred uint))
+  (let 
+    (
+      (venture (unwrap! (map-get? ventures { venture-id: venture-id }) ERR-VENTURE-NOT-FOUND))
+      (current-backing (default-to { amount: u0, withdrawn: false } 
+        (map-get? backers { venture-id: venture-id, backer: tx-sender })))
+    )
+    ;; Validate inputs
+    (asserts! (> venture-id u0) ERR-INVALID-PARAMS)
+    (asserts! (> stx-transferred u0) ERR-INVALID-PARAMS)
+    
+    ;; Validate venture is open and not past end date
+    (asserts! (get is-open venture) ERR-FUNDING-CLOSED)
+    (asserts! (< block-height (get end-date venture)) ERR-FUNDING-CLOSED)
+    
+    ;; Update backers
+    (map-set backers 
+      { venture-id: venture-id, backer: tx-sender }
+      { amount: (+ (get amount current-backing) stx-transferred), withdrawn: false }
+    )
+    
+    ;; Update venture collected amount
+    (map-set ventures 
+      { venture-id: venture-id }
+      (merge venture { collected-amount: (+ (get collected-amount venture) stx-transferred) })
+    )
+    
+    (ok true)
+  )
+)
+
+;; Request withdrawal for a failed venture
+(define-public (request-withdrawal (venture-id uint))
+  (let
+    (
+      (venture (unwrap! (map-get? ventures { venture-id: venture-id }) ERR-VENTURE-NOT-FOUND))
+      (backing (unwrap! (map-get? backers { venture-id: venture-id, backer: tx-sender }) 
+        ERR-NO-WITHDRAWAL-ELIGIBLE))
+    )
+    ;; Validate input
+    (asserts! (> venture-id u0) ERR-INVALID-PARAMS)
+    
+    ;; Check withdrawal eligibility
+    (asserts! (is-withdrawal-eligible venture-id) ERR-VENTURE-SUCCESSFUL)
+    (asserts! (not (get withdrawn backing)) ERR-ALREADY-WITHDRAWN)
+    
+    ;; Process withdrawal
+    (try! (stx-transfer? (get amount backing) tx-sender PLATFORM-ADMIN))
+    
+    ;; Mark backing as withdrawn
+    (map-set backers
+      { venture-id: venture-id, backer: tx-sender }
+      (merge backing { withdrawn: true })
+    )
+    
+    (ok true)
+  )
+)
+
