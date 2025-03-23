@@ -217,3 +217,86 @@
   )
 )
 
+;; Close failed venture and enable withdrawals
+(define-public (close-failed-venture (venture-id uint))
+  (let
+    (
+      (venture (unwrap! (map-get? ventures { venture-id: venture-id }) ERR-VENTURE-NOT-FOUND))
+    )
+    ;; Validate input
+    (asserts! (> venture-id u0) ERR-INVALID-PARAMS)
+    
+    ;; Verify venture has failed
+    (asserts! (>= block-height (get end-date venture)) ERR-FUNDING-CLOSED)
+    (asserts! (< (get collected-amount venture) (get funding-goal venture)) ERR-VENTURE-SUCCESSFUL)
+    (asserts! (get is-open venture) ERR-FUNDING-CLOSED)
+    
+    ;; Update venture status
+    (map-set ventures
+      { venture-id: venture-id }
+      (merge venture { is-open: false })
+    )
+    
+    (ok true)
+  )
+)
+
+;; Complete goal
+(define-public (complete-goal (venture-id uint) (goal-index uint))
+  (let 
+    (
+      (venture (unwrap! (map-get? ventures { venture-id: venture-id }) ERR-VENTURE-NOT-FOUND))
+      (goals (get goals venture))
+      (goal-opt (get-goal-by-index goals goal-index))
+      (goal (unwrap! goal-opt ERR-INVALID-GOAL-INDEX))
+    )
+    ;; Validate inputs
+    (asserts! (> venture-id u0) ERR-INVALID-PARAMS)
+    (asserts! (< goal-index (len goals)) ERR-INVALID-PARAMS)
+    
+    ;; Only venture founder can complete goals
+    (asserts! (is-eq tx-sender (get founder venture)) ERR-NOT-AUTHORIZED)
+    (asserts! (not (get completed goal)) ERR-GOAL-ALREADY-APPROVED)
+    
+    ;; Update goal completion
+    (map-set ventures 
+      { venture-id: venture-id }
+      (merge venture { goals: (update-goal-list goals goal-index (merge goal { completed: true })) })
+    )
+    
+    (ok true)
+  )
+)
+
+;; Finalize venture function
+(define-public (finalize-venture (venture-id uint))
+  (let
+    (
+      (venture (unwrap! (map-get? ventures { venture-id: venture-id }) ERR-VENTURE-NOT-FOUND))
+    )
+    ;; Validate inputs
+    (asserts! (> venture-id u0) ERR-INVALID-PARAMS)
+    
+    ;; Only venture founder can finalize the venture
+    (asserts! (is-eq tx-sender (get founder venture)) ERR-NOT-AUTHORIZED)
+    
+    ;; Check if venture is open
+    (asserts! (get is-open venture) ERR-FUNDING-CLOSED)
+    
+    ;; Check if all goals are completed
+    (asserts! (all-goals-completed? (get goals venture)) ERR-NOT-ALL-GOALS-COMPLETE)
+    
+    ;; Update venture status
+    (map-set ventures
+      { venture-id: venture-id }
+      (merge venture 
+        { 
+          is-open: false,
+          is-finalized: true
+        }
+      )
+    )
+    
+    (ok true)
+  )
+)
