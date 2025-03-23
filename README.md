@@ -79,7 +79,3 @@ The contract includes robust error handling to ensure secure operations:
 - The smart contract uses authorization checks to ensure only the appropriate users can perform specific actions
 - All functions include input validation to prevent invalid operations
 - The contract follows best practices for Clarity development
-
-## Contact
-
-For inquiries, please reach out to the development team at dev@funddaox.io or join our Discord channel.
