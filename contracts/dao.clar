@@ -1,5 +1,18 @@
 ;; FundDaoX Platform Smart Contract
-
+ 
+;; Error Constants
+(define-constant PLATFORM-ADMIN tx-sender)
+(define-constant ERR-NOT-AUTHORIZED (err u100))
+(define-constant ERR-FUNDS-SHORTAGE (err u101))
+(define-constant ERR-VENTURE-NOT-FOUND (err u102))
+(define-constant ERR-FUNDING-CLOSED (err u103))
+(define-constant ERR-GOAL-ALREADY-APPROVED (err u104))
+(define-constant ERR-INVALID-GOAL-INDEX (err u105))
+(define-constant ERR-NO-WITHDRAWAL-ELIGIBLE (err u106))
+(define-constant ERR-ALREADY-WITHDRAWN (err u107))
+(define-constant ERR-VENTURE-SUCCESSFUL (err u108))
+(define-constant ERR-INVALID-PARAMS (err u109))
+(define-constant ERR-NOT-ALL-GOALS-COMPLETE (err u110))
 
 ;; Venture structure
 (define-map ventures
@@ -91,13 +104,5 @@
 ;; Helper function to prepare goal
 (define-read-only (prepare-goal (goal { summary: (string-utf8 200), funds: uint }))
   { summary: (get summary goal), funds: (get funds goal), completed: false }
-)
-
-;; Get goal by index
-(define-private (get-goal-by-index 
-  (venture-goals (list 5 { summary: (string-utf8 200), funds: uint, completed: bool })) 
-  (goal-index uint)
-)
-  (element-at venture-goals goal-index)
 )
 
