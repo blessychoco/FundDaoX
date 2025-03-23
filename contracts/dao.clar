@@ -106,3 +106,54 @@
   { summary: (get summary goal), funds: (get funds goal), completed: false }
 )
 
+;; Get goal by index
+(define-private (get-goal-by-index 
+  (venture-goals (list 5 { summary: (string-utf8 200), funds: uint, completed: bool })) 
+  (goal-index uint)
+)
+  (element-at venture-goals goal-index)
+)
+
+;; Update goal in list
+(define-private (update-goal-list 
+  (goals (list 5 { summary: (string-utf8 200), funds: uint, completed: bool })) 
+  (goal-index uint)
+  (updated-goal { summary: (string-utf8 200), funds: uint, completed: bool })
+)
+  (let
+    (
+      (prefix (unwrap! (slice? goals u0 goal-index) goals))
+      (suffix (unwrap! (slice? goals (+ goal-index u1) (len goals)) goals))
+    )
+    (unwrap-panic 
+      (as-max-len? 
+        (concat
+          prefix
+          (unwrap-panic 
+            (as-max-len? 
+              (concat 
+                (list updated-goal)
+                suffix
+              )
+              u5
+            )
+          )
+        )
+        u5
+      )
+    )
+  )
+)
+
+;; Check if venture is eligible for withdrawals
+(define-read-only (is-withdrawal-eligible (venture-id uint))
+  (match (map-get? ventures { venture-id: venture-id })
+    venture (and 
+      (>= block-height (get end-date venture))
+      (< (get collected-amount venture) (get funding-goal venture))
+      (get is-open venture)
+    )
+    false
+  )
+)
+
